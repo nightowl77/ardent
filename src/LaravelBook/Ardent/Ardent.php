@@ -92,7 +92,7 @@ abstract class Ardent extends Model {
      * @var bool
      */
     public $autoPurgeRedundantAttributes = false;
-
+    
     /**
      * Array of closure functions which determine if a given attribute is deemed
      * redundant (and should not be persisted in the database)
@@ -511,7 +511,11 @@ abstract class Ardent extends Model {
 			}
 
 			$data = $this->getAttributes(); // the data under validation
-
+			
+			//if ($this->exists && $this->autoUniqueUpdates) 
+			//   $rules = $this->buildUniqueExclusionRules($rules);
+			
+			
 			// perform validation
 			$validator = self::makeValidator($data, $rules, $customMessages);
 			$success   = $validator->passes();
@@ -751,11 +755,13 @@ abstract class Ardent extends Model {
      *
      * @return array Rules with exclusions applied
      */
-    protected function buildUniqueExclusionRules() {
+    protected function buildUniqueExclusionRules($rules = null) {
         // Because Ardent uses statics (sigh), we need to do this to get the
         // model's rules.
-        $class = new \ReflectionClass($this);
-        $rules = $class->getStaticPropertyValue('rules');
+        if (!$rules) {
+          $class = new \ReflectionClass($this);
+          $rules = $class->getStaticPropertyValue('rules');
+        }
 
         foreach ($rules as $field => &$ruleset) {
             // If $ruleset is a pipe-separated string, switch it to array
@@ -769,9 +775,10 @@ abstract class Ardent extends Model {
                     if (count($params) == 1) {
                         $params[2] = $field;
                     }
-
-                    $params[3] = $this->id;
-
+                    
+                    // if the 3rd param was set, do not overwrite it
+                    if (!is_numeric(@$params[2])) $params[2] = $this->id;
+                   
                     $rule = implode(',', $params);
                 }
             }
